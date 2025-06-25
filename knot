@@ -16,36 +16,36 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 show_banner() {
-    echo ""
-    echo "┌──────────────────────────────────────────────────────────────┐"
-    echo "│                      🪢 Knot v2.1 🪢                          │"
-    echo "│      Self-hosted Registry & Remote Builder for Kamal 2       │"
-    echo "│              Zero External Dependencies                       │"
-    echo "└──────────────────────────────────────────────────────────────┘"
-    echo ""
+  echo ""
+  echo "┌──────────────────────────────────────────────────────────────┐"
+  echo "│                      🪢 Knot v2.1 🪢                          │"
+  echo "│      Self-hosted Registry & Remote Builder for Kamal 2       │"
+  echo "│              Zero External Dependencies                       │"
+  echo "└──────────────────────────────────────────────────────────────┘"
+  echo ""
 }
 
 show_help() {
-    echo -e "${BLUE}Usage:${NC} ./knot [command]"
-    echo ""
-    echo -e "${YELLOW}Commands:${NC}"
-    echo "  setup      🚀 Configure your registry (interactive)"
-    echo "  deploy     📦 Deploy registry (zero external dependencies)"
-    echo "  status     📊 Check registry status"
-    echo "  logs       📝 View registry logs"
-    echo "  test       🧪 Test registry connectivity"
-    echo "  help       ❓ Show this help"
-    echo ""
-    echo -e "${YELLOW}Quick Start:${NC}"
-    echo "  ./knot setup    # Configure once"
-    echo "  ./knot deploy   # Deploy registry"
-    echo "  ./knot test     # Verify it works"
-    echo ""
-    echo -e "${YELLOW}Zero Dependencies:${NC}"
-    echo "  • No Docker Hub account needed"
-    echo "  • No external registry required" 
-    echo "  • Uses deployto.dev validation hack"
-    echo ""
+  echo -e "${BLUE}Usage:${NC} ./knot [command]"
+  echo ""
+  echo -e "${YELLOW}Commands:${NC}"
+  echo "  setup      🚀 Configure your registry (interactive)"
+  echo "  deploy     📦 Deploy registry (zero external dependencies)"
+  echo "  status     📊 Check registry status"
+  echo "  logs       📝 View registry logs"
+  echo "  test       🧪 Test registry connectivity"
+  echo "  help       ❓ Show this help"
+  echo ""
+  echo -e "${YELLOW}Quick Start:${NC}"
+  echo "  ./knot setup    # Configure once"
+  echo "  ./knot deploy   # Deploy registry"
+  echo "  ./knot test     # Verify it works"
+  echo ""
+  echo -e "${YELLOW}Zero Dependencies:${NC}"
+  echo "  • No Docker Hub account needed"
+  echo "  • No external registry required"
+  echo "  • Uses deployto.dev validation hack"
+  echo ""
 }
 
 # ============================================================================
@@ -53,115 +53,115 @@ show_help() {
 # ============================================================================
 
 validate_ip() {
-    if [[ $1 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-        return 0
-    else
-        return 1
-    fi
+  if [[ $1 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 validate_domain() {
-    if [[ $1 =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$ ]]; then
-        return 0
-    else
-        return 1
-    fi
+  if [[ $1 =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$ ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 run_setup() {
-    echo -e "${BLUE}🚀 Setting up Knot Registry & Builder${NC}"
-    echo ""
-    
-    # Check prerequisites
-    if ! command -v kamal &> /dev/null; then
-        echo -e "${RED}❌ Kamal is not installed. Please install it first:${NC}"
-        echo "   gem install kamal"
+  echo -e "${BLUE}🚀 Setting up Knot Registry & Builder${NC}"
+  echo ""
+
+  # Check prerequisites
+  if ! command -v kamal &>/dev/null; then
+    echo -e "${RED}❌ Kamal is not installed. Please install it first:${NC}"
+    echo "   gem install kamal"
+    exit 1
+  fi
+
+  if ! command -v htpasswd &>/dev/null; then
+    echo -e "${RED}❌ htpasswd is not installed. Installing...${NC}"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      if command -v brew &>/dev/null; then
+        brew install httpd
+      else
+        echo "Please install htpasswd: brew install httpd"
         exit 1
+      fi
+    elif [[ -f /etc/debian_version ]]; then
+      sudo apt-get update && sudo apt-get install -y apache2-utils
+    elif [[ -f /etc/redhat-release ]]; then
+      if command -v dnf &>/dev/null; then
+        sudo dnf install -y httpd-tools
+      else
+        sudo yum install -y httpd-tools
+      fi
+    else
+      echo "Please install htpasswd manually"
+      exit 1
     fi
-    
-    if ! command -v htpasswd &> /dev/null; then
-        echo -e "${RED}❌ htpasswd is not installed. Installing...${NC}"
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            if command -v brew &> /dev/null; then
-                brew install httpd
-            else
-                echo "Please install htpasswd: brew install httpd"
-                exit 1
-            fi
-        elif [[ -f /etc/debian_version ]]; then
-            sudo apt-get update && sudo apt-get install -y apache2-utils
-        elif [[ -f /etc/redhat-release ]]; then
-            if command -v dnf &> /dev/null; then
-                sudo dnf install -y httpd-tools
-            else
-                sudo yum install -y httpd-tools
-            fi
-        else
-            echo "Please install htpasswd manually"
-            exit 1
-        fi
+  fi
+
+  echo -e "${GREEN}✅ Prerequisites ready${NC}"
+  echo ""
+
+  # Get VPS IP
+  while true; do
+    echo "🖥️  VPS Configuration:"
+    echo "   Enter the IP address where your Docker registry will be hosted"
+    echo ""
+    read -p "VPS IP address: " VPS_IP
+
+    if [[ -z "$VPS_IP" ]]; then
+      echo -e "${RED}❌ VPS IP is required${NC}"
+      continue
     fi
-    
-    echo -e "${GREEN}✅ Prerequisites ready${NC}"
+
+    if validate_ip "$VPS_IP"; then
+      echo -e "${GREEN}✅ Valid IP: $VPS_IP${NC}"
+      break
+    else
+      echo -e "${RED}❌ Invalid IP format${NC}"
+    fi
+  done
+
+  echo ""
+
+  # Get domain
+  while true; do
+    echo "🌐 Domain Configuration:"
+    echo "   This domain should point to your VPS IP ($VPS_IP)"
     echo ""
-    
-    # Get VPS IP
-    while true; do
-        echo "🖥️  VPS Configuration:"
-        echo "   Enter the IP address where your Docker registry will be hosted"
-        echo ""
-        read -p "VPS IP address: " VPS_IP
-        
-        if [[ -z "$VPS_IP" ]]; then
-            echo -e "${RED}❌ VPS IP is required${NC}"
-            continue
-        fi
-        
-        if validate_ip "$VPS_IP"; then
-            echo -e "${GREEN}✅ Valid IP: $VPS_IP${NC}"
-            break
-        else
-            echo -e "${RED}❌ Invalid IP format${NC}"
-        fi
-    done
-    
-    echo ""
-    
-    # Get domain
-    while true; do
-        echo "🌐 Domain Configuration:"
-        echo "   This domain should point to your VPS IP ($VPS_IP)"
-        echo ""
-        read -p "Registry domain (e.g., registry.yourdomain.com): " REGISTRY_DOMAIN
-        
-        if [[ -z "$REGISTRY_DOMAIN" ]]; then
-            echo -e "${RED}❌ Domain is required${NC}"
-            continue
-        fi
-        
-        if validate_domain "$REGISTRY_DOMAIN"; then
-            echo -e "${GREEN}✅ Valid domain: $REGISTRY_DOMAIN${NC}"
-            break
-        else
-            echo -e "${RED}❌ Invalid domain format${NC}"
-        fi
-    done
-    
-    echo ""
-    
-    # Get SSH user
-    echo "🔑 SSH Configuration:"
-    echo "   Common users: root (most VPS), ubuntu (AWS/GCP)"
-    echo ""
-    read -p "SSH user [$([[ "$VPS_IP" == *"aws"* ]] && echo "ubuntu" || echo "root")]: " SSH_USER
-    SSH_USER=${SSH_USER:-$([[ "$VPS_IP" == *"aws"* ]] && echo "ubuntu" || echo "root")}
-    echo -e "${GREEN}✅ Using SSH user: $SSH_USER${NC}"
-    
-    echo ""
-    echo -e "${BLUE}🔧 Configuring files...${NC}"
-    
-    # Create deploy config following Jason Nochlin's approach
-    cat > config/deploy.yml << EOF
+    read -p "Registry domain (e.g., registry.yourdomain.com): " REGISTRY_DOMAIN
+
+    if [[ -z "$REGISTRY_DOMAIN" ]]; then
+      echo -e "${RED}❌ Domain is required${NC}"
+      continue
+    fi
+
+    if validate_domain "$REGISTRY_DOMAIN"; then
+      echo -e "${GREEN}✅ Valid domain: $REGISTRY_DOMAIN${NC}"
+      break
+    else
+      echo -e "${RED}❌ Invalid domain format${NC}"
+    fi
+  done
+
+  echo ""
+
+  # Get SSH user
+  echo "🔑 SSH Configuration:"
+  echo "   Common users: root (most VPS), ubuntu (AWS/GCP)"
+  echo ""
+  read -p "SSH user [$([[ "$VPS_IP" == *"aws"* ]] && echo "ubuntu" || echo "root")]: " SSH_USER
+  SSH_USER=${SSH_USER:-$([[ "$VPS_IP" == *"aws"* ]] && echo "ubuntu" || echo "root")}
+  echo -e "${GREEN}✅ Using SSH user: $SSH_USER${NC}"
+
+  echo ""
+  echo -e "${BLUE}🔧 Configuring files...${NC}"
+
+  # Create deploy config following Jason Nochlin's approach
+  cat >config/deploy.yml <<EOF
 service: registry
 image: registry:2
 
@@ -214,47 +214,47 @@ accessories:
 ssh:
   user: $SSH_USER
 EOF
-    
-    echo -e "${GREEN}✅ Created deployment configuration${NC}"
-    
-    # Generate secrets
-    REGISTRY_SECRET=$(openssl rand -base64 32)
-    REGISTRY_PASSWORD=$(openssl rand -base64 24)
-    
-    # Create htpasswd file
-    htpasswd -Bbn admin "$REGISTRY_PASSWORD" > htpasswd
-    echo -e "${GREEN}✅ Created authentication file${NC}"
-    echo ""
-    
-    echo -e "${GREEN}🎉 Setup complete!${NC}"
-    echo ""
-    echo "📝 Registry credentials:"
-    echo "   Domain: https://$REGISTRY_DOMAIN"
-    echo "   Username: admin"
-    echo "   Password: $REGISTRY_PASSWORD"
-    echo ""
-    echo "🚀 Next step:"
-    echo "   ./knot deploy"
-    echo ""
-    echo "📋 After deployment, add to your Kamal 2 apps:"
-    echo ""
-    echo "   # config/deploy.yml"
-    echo "   registry:"
-    echo "     server: $REGISTRY_DOMAIN"
-    echo "     username: admin"
-    echo "     password: <%= ENV[\"REGISTRY_PASSWORD\"] %>"
-    echo ""
-    echo "   builder:"
-    echo "     arch: amd64"
-    echo "     remote: ssh://$SSH_USER@$VPS_IP"
-    echo ""
-    echo "   # Set environment variable:"
-    echo "   export REGISTRY_PASSWORD='$REGISTRY_PASSWORD'"
-    echo ""
-    echo "   # Then build and deploy:"
-    echo "   kamal build   # Builds on your VPS!"
-    echo "   kamal deploy  # Deploys from your registry"
-    echo ""
+
+  echo -e "${GREEN}✅ Created deployment configuration${NC}"
+
+  # Generate secrets
+  REGISTRY_SECRET=$(openssl rand -base64 32)
+  REGISTRY_PASSWORD=$(openssl rand -base64 24)
+
+  # Create htpasswd file
+  htpasswd -Bbn admin "$REGISTRY_PASSWORD" >htpasswd
+  echo -e "${GREEN}✅ Created authentication file${NC}"
+  echo ""
+
+  echo -e "${GREEN}🎉 Setup complete!${NC}"
+  echo ""
+  echo "📝 Registry credentials:"
+  echo "   Domain: https://$REGISTRY_DOMAIN"
+  echo "   Username: admin"
+  echo "   Password: $REGISTRY_PASSWORD"
+  echo ""
+  echo "🚀 Next step:"
+  echo "   ./knot deploy"
+  echo ""
+  echo "📋 After deployment, add to your Kamal 2 apps:"
+  echo ""
+  echo "   # config/deploy.yml"
+  echo "   registry:"
+  echo "     server: $REGISTRY_DOMAIN"
+  echo "     username: admin"
+  echo "     password: <%= ENV[\"REGISTRY_PASSWORD\"] %>"
+  echo ""
+  echo "   builder:"
+  echo "     arch: amd64"
+  echo "     remote: ssh://$SSH_USER@$VPS_IP"
+  echo ""
+  echo "   # Set environment variable:"
+  echo "   export REGISTRY_PASSWORD='$REGISTRY_PASSWORD'"
+  echo ""
+  echo "   # Then build and deploy:"
+  echo "   kamal build   # Builds on your VPS!"
+  echo "   kamal deploy  # Deploys from your registry"
+  echo ""
 }
 
 # ============================================================================
@@ -262,80 +262,80 @@ EOF
 # ============================================================================
 
 run_deploy() {
-    echo -e "${BLUE}📦 Deploying Registry (Zero Dependencies)${NC}"
-    echo ""
-    
-    # Check if config exists
-    if [[ ! -f "config/deploy.yml" ]]; then
-        echo -e "${RED}❌ Configuration not found${NC}"
-        echo "   💡 Run: ./knot setup"
-        exit 1
+  echo -e "${BLUE}📦 Deploying Registry (Zero Dependencies)${NC}"
+  echo ""
+
+  # Check if config exists
+  if [[ ! -f "config/deploy.yml" ]]; then
+    echo -e "${RED}❌ Configuration not found${NC}"
+    echo "   💡 Run: ./knot setup"
+    exit 1
+  fi
+
+  echo "📡 Deploying registry (zero external dependencies)..."
+  echo ""
+
+  # Deploy following Jason Nochlin's approach
+  echo "🔧 Step 1: Bootstrap server..."
+  if ! kamal server bootstrap; then
+    echo -e "${RED}❌ Server bootstrap failed${NC}"
+    exit 1
+  fi
+
+  echo ""
+  echo "🔧 Step 2: Boot proxy..."
+  if ! kamal proxy boot; then
+    echo -e "${RED}❌ Proxy boot failed${NC}"
+    exit 1
+  fi
+
+  echo ""
+  echo "📦 Step 3: Boot registry accessory..."
+  if ! kamal accessory boot registry; then
+    echo -e "${RED}❌ Registry accessory boot failed${NC}"
+    exit 1
+  fi
+
+  echo ""
+  echo "⏳ Waiting for registry to start..."
+  sleep 15
+
+  echo ""
+  echo "🔗 Step 4: Add registry to proxy..."
+  if ! kamal add-registry-to-proxy; then
+    echo -e "${RED}❌ Failed to add registry to proxy${NC}"
+    exit 1
+  fi
+
+  echo ""
+  echo -e "${GREEN}🎉 Deployment successful!${NC}"
+  echo ""
+
+  # Test the deployment
+  REGISTRY_DOMAIN=$(grep -o '"registry\.deployto\.dev"' config/deploy.yml | sed 's/"//g')
+  if [[ ! -z "$REGISTRY_DOMAIN" ]]; then
+    echo "🧪 Testing registry..."
+    sleep 10
+
+    if curl -f "https://$REGISTRY_DOMAIN/v2/" &>/dev/null; then
+      echo -e "${GREEN}✅ Registry is responding at https://$REGISTRY_DOMAIN${NC}"
+    else
+      echo -e "${YELLOW}⚠️  Registry not responding yet (certificates may still be provisioning)${NC}"
+      echo "   Run: ./knot test (after a few minutes)"
     fi
-    
-    echo "📡 Deploying registry (zero external dependencies)..."
-    echo ""
-    
-    # Deploy following Jason Nochlin's approach
-    echo "🔧 Step 1: Bootstrap server..."
-    if ! kamal server bootstrap; then
-        echo -e "${RED}❌ Server bootstrap failed${NC}"
-        exit 1
-    fi
-    
-    echo ""
-    echo "🔧 Step 2: Boot proxy..."
-    if ! kamal proxy boot; then
-        echo -e "${RED}❌ Proxy boot failed${NC}"
-        exit 1
-    fi
-    
-    echo ""
-    echo "📦 Step 3: Boot registry accessory..."
-    if ! kamal accessory boot registry; then
-        echo -e "${RED}❌ Registry accessory boot failed${NC}"
-        exit 1
-    fi
-    
-    echo ""
-    echo "⏳ Waiting for registry to start..."
-    sleep 15
-    
-    echo ""
-    echo "🔗 Step 4: Add registry to proxy..."
-    if ! kamal add-registry-to-proxy; then
-        echo -e "${RED}❌ Failed to add registry to proxy${NC}"
-        exit 1
-    fi
-    
-    echo ""
-    echo -e "${GREEN}🎉 Deployment successful!${NC}"
-    echo ""
-    
-    # Test the deployment
-    REGISTRY_DOMAIN=$(grep -o '"registry\.deployto\.dev"' config/deploy.yml | sed 's/"//g')
-    if [[ ! -z "$REGISTRY_DOMAIN" ]]; then
-        echo "🧪 Testing registry..."
-        sleep 10
-        
-        if curl -f "https://$REGISTRY_DOMAIN/v2/" &>/dev/null; then
-            echo -e "${GREEN}✅ Registry is responding at https://$REGISTRY_DOMAIN${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Registry not responding yet (certificates may still be provisioning)${NC}"
-            echo "   Run: ./knot test (after a few minutes)"
-        fi
-    fi
-    
-    echo ""
-    echo -e "${GREEN}🎯 Your registry & builder are ready!${NC}"
-    echo ""
-    echo "💡 Next steps:"
-    echo "   1. Test: ./knot test"
-    echo "   2. Login: docker login $REGISTRY_DOMAIN"
-    echo "   3. Use in your apps: kamal build && kamal deploy"
-    echo ""
-    echo "🔐 Credentials:"
-    echo "   Username: admin"
-    echo "   Password: (shown during setup)"
+  fi
+
+  echo ""
+  echo -e "${GREEN}🎯 Your registry & builder are ready!${NC}"
+  echo ""
+  echo "💡 Next steps:"
+  echo "   1. Test: ./knot test"
+  echo "   2. Login: docker login $REGISTRY_DOMAIN"
+  echo "   3. Use in your apps: kamal build && kamal deploy"
+  echo ""
+  echo "🔐 Credentials:"
+  echo "   Username: admin"
+  echo "   Password: (shown during setup)"
 }
 
 # ============================================================================
@@ -343,79 +343,79 @@ run_deploy() {
 # ============================================================================
 
 run_status() {
-    echo -e "${BLUE}📊 Registry Status${NC}"
-    echo ""
-    
-    if [[ ! -f "config/deploy.yml" ]]; then
-        echo -e "${RED}❌ Not configured. Run: ./knot setup${NC}"
-        exit 1
-    fi
-    
-    echo "Registry service:"
-    kamal app details 2>/dev/null || echo "Registry not deployed yet"
-    
-    echo ""
-    echo "Proxy status:"
-    kamal proxy status 2>/dev/null || echo "Proxy status unavailable"
+  echo -e "${BLUE}📊 Registry Status${NC}"
+  echo ""
+
+  if [[ ! -f "config/deploy.yml" ]]; then
+    echo -e "${RED}❌ Not configured. Run: ./knot setup${NC}"
+    exit 1
+  fi
+
+  echo "Registry service:"
+  kamal app details 2>/dev/null || echo "Registry not deployed yet"
+
+  echo ""
+  echo "Proxy status:"
+  kamal proxy status 2>/dev/null || echo "Proxy status unavailable"
 }
 
 run_logs() {
-    echo -e "${BLUE}📝 Registry Logs${NC}"
-    echo "Press Ctrl+C to exit"
-    echo ""
-    
-    if [[ ! -f "config/deploy.yml" ]]; then
-        echo -e "${RED}❌ Not configured. Run: ./knot setup${NC}"
-        exit 1
-    fi
-    
-    kamal app logs --follow
+  echo -e "${BLUE}📝 Registry Logs${NC}"
+  echo "Press Ctrl+C to exit"
+  echo ""
+
+  if [[ ! -f "config/deploy.yml" ]]; then
+    echo -e "${RED}❌ Not configured. Run: ./knot setup${NC}"
+    exit 1
+  fi
+
+  kamal app logs --follow
 }
 
 run_test() {
-    echo -e "${BLUE}🧪 Testing Registry${NC}"
-    echo ""
-    
-    if [[ ! -f "config/deploy.yml" ]]; then
-        echo -e "${RED}❌ Not configured. Run: ./knot setup${NC}"
-        exit 1
-    fi
-    
-    REGISTRY_DOMAIN=$(grep -o '"registry\.deployto\.dev"' config/deploy.yml | sed 's/"//g')
-    
-    if [[ -z "$REGISTRY_DOMAIN" ]]; then
-        echo -e "${RED}❌ Could not find registry domain${NC}"
-        exit 1
-    fi
-    
-    echo "Testing registry at: https://$REGISTRY_DOMAIN"
-    echo ""
-    
-    echo "1. DNS resolution..."
-    if dig +short "$REGISTRY_DOMAIN" &>/dev/null; then
-        RESOLVED_IP=$(dig +short "$REGISTRY_DOMAIN" | head -1)
-        echo -e "${GREEN}   ✅ DNS resolves to: $RESOLVED_IP${NC}"
-    else
-        echo -e "${RED}   ❌ DNS resolution failed${NC}"
-    fi
-    
-    echo ""
-    echo "2. HTTPS connectivity..."
-    if curl -f "https://$REGISTRY_DOMAIN/v2/" &>/dev/null; then
-        echo -e "${GREEN}   ✅ Registry is responding${NC}"
-    else
-        echo -e "${RED}   ❌ Registry not responding${NC}"
-    fi
-    
-    echo ""
-    echo "3. Service status..."
-    kamal app details 2>/dev/null || echo "   Service status unavailable"
-    
-    echo ""
-    echo "💡 To login: docker login $REGISTRY_DOMAIN"
-    echo "🔐 Credentials:"
-    echo "   Username: admin"
-    echo "   Password: (shown during setup)"
+  echo -e "${BLUE}🧪 Testing Registry${NC}"
+  echo ""
+
+  if [[ ! -f "config/deploy.yml" ]]; then
+    echo -e "${RED}❌ Not configured. Run: ./knot setup${NC}"
+    exit 1
+  fi
+
+  REGISTRY_DOMAIN=$(grep -A 1 -- '--host' config/deploy.yml | grep -o '"[^"]*"' | sed 's/"//g' | head -1)
+
+  if [[ -z "$REGISTRY_DOMAIN" ]]; then
+    echo -e "${RED}❌ Could not find registry domain${NC}"
+    exit 1
+  fi
+
+  echo "Testing registry at: https://$REGISTRY_DOMAIN"
+  echo ""
+
+  echo "1. DNS resolution..."
+  if dig +short "$REGISTRY_DOMAIN" &>/dev/null; then
+    RESOLVED_IP=$(dig +short "$REGISTRY_DOMAIN" | head -1)
+    echo -e "${GREEN}   ✅ DNS resolves to: $RESOLVED_IP${NC}"
+  else
+    echo -e "${RED}   ❌ DNS resolution failed${NC}"
+  fi
+
+  echo ""
+  echo "2. HTTPS connectivity..."
+  if curl -f "https://$REGISTRY_DOMAIN" &>/dev/null; then
+    echo -e "${GREEN}   ✅ Registry is responding${NC}"
+  else
+    echo -e "${RED}   ❌ Registry not responding${NC}"
+  fi
+
+  echo ""
+  echo "3. Service status..."
+  kamal app details 2>/dev/null || echo "   Service status unavailable"
+
+  echo ""
+  echo "💡 To login: docker login $REGISTRY_DOMAIN"
+  echo "🔐 Credentials:"
+  echo "   Username: admin"
+  echo "   Password: (shown during setup)"
 }
 
 # ============================================================================
@@ -425,28 +425,29 @@ run_test() {
 show_banner
 
 case "${1:-help}" in
-    "setup"|"init"|"configure")
-        run_setup
-        ;;
-    "deploy"|"bootstrap"|"install")
-        run_deploy
-        ;;
-    "status"|"health")
-        run_status
-        ;;
-    "logs"|"log")
-        run_logs
-        ;;
-    "test"|"verify"|"check")
-        run_test
-        ;;
-    "help"|"--help"|"-h"|"")
-        show_help
-        ;;
-    *)
-        echo -e "${RED}❌ Unknown command: $1${NC}"
-        echo ""
-        show_help
-        exit 1
-        ;;
-esac 
+"setup" | "init" | "configure")
+  run_setup
+  ;;
+"deploy" | "bootstrap" | "install")
+  run_deploy
+  ;;
+"status" | "health")
+  run_status
+  ;;
+"logs" | "log")
+  run_logs
+  ;;
+"test" | "verify" | "check")
+  run_test
+  ;;
+"help" | "--help" | "-h" | "")
+  show_help
+  ;;
+*)
+  echo -e "${RED}❌ Unknown command: $1${NC}"
+  echo ""
+  show_help
+  exit 1
+  ;;
+esac
+
